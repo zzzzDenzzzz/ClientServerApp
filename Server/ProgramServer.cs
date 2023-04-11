@@ -4,18 +4,11 @@ using System.Text;
 
 using Socket tcpListener = new (AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
 
-var words = new Dictionary<string, string>()
-{
-    { "red", "красный" },
-    { "blue", "синий" },
-    { "green", "зеленый" },
-};
-
 try
 {
     tcpListener.Bind(new IPEndPoint(IPAddress.Any, 8888));
     tcpListener.Listen();    // запускаем сервер
-    Console.WriteLine("Сервер запущен. Ожидание подключений... ");
+    Console.WriteLine($"Сервер запущен. Ожидание подключений...{Environment.NewLine}");
 
     while (true)
     {
@@ -37,18 +30,19 @@ try
                 // иначе добавляем в буфер
                 response.Add(bytesRead[0]);
             }
-            var word = Encoding.UTF8.GetString(response.ToArray());
+            var request = Encoding.UTF8.GetString(response.ToArray());
             // если прислан маркер окончания взаимодействия,
             // выходим из цикла и завершаем взаимодействие с клиентом
-            if (word == "END") break;
+            if (string.Equals(request, "end", StringComparison.OrdinalIgnoreCase))
+            {
+                Console.WriteLine($"Клиент {tcpClient.LocalEndPoint} завершил работу");
+                break;
+            } 
 
-            Console.WriteLine($"Запрошен перевод слова {word}");
-            // находим слово в словаре и отправляем обратно клиенту
-            if (!words.TryGetValue(word, out var translation)) translation = "не найдено в словаре";
-            // добавляем символ окончания сообщения 
-            translation += '\n';
-            // отправляем перевод слова из словаря
-            await tcpClient.SendAsync(Encoding.UTF8.GetBytes(translation), SocketFlags.None);
+            Console.WriteLine($"Запрос: {request}");
+
+            DateTime time = DateTime.Now;
+            await tcpClient.SendAsync(Encoding.UTF8.GetBytes(time.ToString("G") + "\n"), SocketFlags.None);
             response.Clear();
         }
     }
